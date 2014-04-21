@@ -1,3 +1,1 @@
-interval (a,b) = if a > b
-                 then []
-                 else a : interval(succ a,b)
+epsilon = subtract 1 . last . takeWhile (/= 1) . map (+ 1) . iterate (/2) $ 1
