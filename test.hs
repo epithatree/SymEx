@@ -1,1 +1,1 @@
-epsilon = subtract 1 . last . takeWhile (/= 1) . map (+ 1) . iterate (/2) $ 1
+(([RBinary Less (Var "x0") (IntConst 0)], [("x",Var "x0")]), ([RBinary Less (Var "x0") (IntConst 0)], [("x", Var"x0")]))
