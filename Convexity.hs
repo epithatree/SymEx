@@ -54,11 +54,14 @@ inflateConditions cons1 cons2 input varMap = combineConditions (xs++ys++zs) varM
       zs = map extendCon cons2
 
 inflateCon :: Var -> BExpr -> BExpr
+inflateCon input (Not x) = (Not (inflateCon input x))
+inflateCon input (BBinary op expr1 expr2) = (BBinary op (inflateCon input expr1) (inflateCon input expr2))
 inflateCon input (RBinary op expr1 expr2) = (RBinary op (inflateConA input expr1) (inflateConA input expr2))
 inflateCon input x = x
 
 inflateConA :: Var -> AExpr -> AExpr
 inflateConA input (Var x) = if x == input then (ABinary Add (Var x) (IntConst 1)) else (Var x)
+inflateConA input (Neg expr) = (Neg (inflateConA input expr))
 inflateConA input (ABinary op expr1 expr2) = (ABinary op (inflateConA input expr1) (inflateConA input expr2))
 inflateConA input x = x
 
@@ -167,7 +170,7 @@ assignmentCCCheck input expr1 expr2 varMap=
 
 cCCheckTest :: Var -> VarMap -> Conditions -> Conditions -> AExpr -> AExpr -> IO Bool
 cCCheckTest input varMap conds1 conds2 ass1 ass2 = 
-    (isVacuous $
+    ( model $ prove $
     sInteger "a" >>= (\a ->
       sInteger "b" >>= (\b ->
         sInteger "c" >>= (\c ->
@@ -177,13 +180,11 @@ cCCheckTest input varMap conds1 conds2 ass1 ass2 =
                 sInteger "g" >>= (\g ->
                   (enforceConditions $ inflateConditions conds1 conds2 input (zip varMap (a:b:c:d:e:f:g:[])) )>>
                     (assignmentCCCheck input ass1 ass2 (zip varMap (a:b:c:d:e:f:g:[]))))))))))) >>= (\x ->
-                      return x)
+                      return (isJust x))
  
 cCCheck :: Var -> Var -> VarMap -> (Execution, Execution) -> IO Bool
 cCCheck input output varMap ((conds1, ass1), (conds2, ass2)) = 
-     (cCCheckTest input varMap conds1 conds2 assignment1 assignment2) >>= (\x ->
-       (cCCheckTest input varMap conds2 conds1 assignment2 assignment1) >>= (\y ->
-         return (x || y)))
+     (cCCheckTest input varMap conds1 conds2 assignment1 assignment2) 
      where
        assignment1 = snd $ fromJust $ find searcher ass1
        assignment2 = snd $ fromJust $ find searcher ass2
@@ -224,7 +225,7 @@ convexityChecker input output xs =
      cCheckRes >>= \x ->
        eCheckRes >>= \y ->
          cCCheckRes >>= \z ->
-           return (not (x || y ))
+           return (not (x || y || z ))
      where
        varMap = varGenerator xs
        cCheckRes = cChecks input output varMap xs
